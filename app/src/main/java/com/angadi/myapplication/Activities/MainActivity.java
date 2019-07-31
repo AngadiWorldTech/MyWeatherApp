@@ -1,6 +1,7 @@
 package com.angadi.myapplication.Activities;
 
 import android.Manifest;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.IntentSender;
@@ -65,6 +66,7 @@ public class MainActivity extends AppCompatActivity {
     boolean GpsStatus;
     GPSTracker gps;
     double latitude;
+    ProgressDialog progressDialog;
     double longitude;
 
     @BindView(R.id.loader) ProgressBar loader;
@@ -100,6 +102,12 @@ public class MainActivity extends AppCompatActivity {
             window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
             window.setStatusBarColor(ContextCompat.getColor(this, R.color.colorstatusbar));
         }
+
+        progressDialog = new ProgressDialog( this);
+        progressDialog.setMessage("Loading...");
+        progressDialog.setCancelable(false);
+
+
 
 
         DateFormat df = new SimpleDateFormat("HH:MM:SS");
@@ -154,8 +162,8 @@ public class MainActivity extends AppCompatActivity {
             gps = new GPSTracker(this);
 
 
-            if (GpsStatus == true) {
-
+            if (GpsStatus == true)
+            {
 
                 latitude = gps.getLatitude();
                 longitude = gps.getLongitude();
@@ -166,7 +174,10 @@ public class MainActivity extends AppCompatActivity {
                 city = "lat="+latitude+"&"+"lon="+longitude;
                 taskLoadUp(city);
 
+
+
             } else {
+
 
                 displayLocationSettingsRequest(this);
             }
@@ -189,49 +200,61 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
-            loader.setVisibility(View.VISIBLE);
+          //  loader.setVisibility(View.VISIBLE);
+
+            progressDialog.show();
+
 
         }
-        protected String doInBackground(String...args)
+        public String doInBackground(String...args)
         {
-            String xml = WeatherHttpClient.excuteGet("http://api.openweathermap.org/data/2.5/weather?" + args[0] +
+            String s = args[0];
+            String xml = WeatherHttpClient.excuteGet("http://api.openweathermap.org/data/2.5/weather?" + s +
                     "&units=metric&appid=" + OPEN_WEATHER_MAP_API);
-            Log.e("API_URL",xml);
+
             return xml;
         }
         @Override
-        protected void onPostExecute(String xml) {
+        public void onPostExecute(String xml)
+        {
 
             try {
-                JSONObject json = new JSONObject(xml);
-                Log.e("DATA--->", String.valueOf(json));
-                if (json != null) {
-                    JSONObject details = json.getJSONArray("weather").getJSONObject(0);
-                    JSONObject main = json.getJSONObject("main");
-                    DateFormat df = DateFormat.getDateTimeInstance();
+                if (xml != null && xml.length()>0)
+                {
+                    JSONObject json = new JSONObject(xml);
+                    if (json != null) {
+                        JSONObject details = json.getJSONArray("weather").getJSONObject(0);
+                        JSONObject main = json.getJSONObject("main");
+                        DateFormat df = DateFormat.getDateTimeInstance();
 
-                    cityField.setText(json.getString("name").toUpperCase(Locale.US) + ", " + json.getJSONObject("sys").getString("country"));
-                    detailsField.setText(details.getString("description").toUpperCase(Locale.US));
-                    currentTemperatureField.setText(String.format("%.2f", main.getDouble("temp")) + "°");
-                    TextviewMinTemp.setText("Min: "+String.format("%.2f", main.getDouble("temp_min")) + "°");
-                    TextviewMaxTemp.setText("Max: "+String.format("%.2f", main.getDouble("temp_max")) + "°");
-                    humidity_field.setText("Humidity: " + main.getString("humidity") + "%");
+                        cityField.setText(json.getString("name").toUpperCase(Locale.US) + ", " + json.getJSONObject("sys").getString("country"));
+                        detailsField.setText(details.getString("description").toUpperCase(Locale.US));
+                        currentTemperatureField.setText(String.format("%.2f", main.getDouble("temp")) + "°");
+                        TextviewMinTemp.setText("Min: " + String.format("%.2f", main.getDouble("temp_min")) + "°");
+                        TextviewMaxTemp.setText("Max: " + String.format("%.2f", main.getDouble("temp_max")) + "°");
+                        humidity_field.setText("Humidity: " + main.getString("humidity") + "%");
 
-                    pressure_field.setText("Pressure: " + main.getString("pressure") + " hPa");
-                    updatedField.setText(df.format(new Date(json.getLong("dt") * 1000)));
+                        pressure_field.setText("Pressure: " + main.getString("pressure") + " hPa");
+                        updatedField.setText(df.format(new Date(json.getLong("dt") * 1000)));
 
 
-                    weatherIcon.setText(Html.fromHtml(WeatherHttpClient.setWeatherIcon(details.getInt("id"),
-                            json.getJSONObject("sys").getLong("sunrise") * 1000,
-                            json.getJSONObject("sys").getLong("sunset") * 1000)));
+                        weatherIcon.setText(Html.fromHtml(WeatherHttpClient.setWeatherIcon(details.getInt("id"),
+                                json.getJSONObject("sys").getLong("sunrise") * 1000,
+                                json.getJSONObject("sys").getLong("sunset") * 1000)));
 
-                    loader.setVisibility(View.GONE);
-                    ButtonCurrentLocation.setVisibility(View.VISIBLE);
+                        // loader.setVisibility(View.GONE);
 
+                        progressDialog.hide();
+
+                        ButtonCurrentLocation.setVisibility(View.VISIBLE);
+
+                    }
                 }
+
             } catch (JSONException e) {
                 Toast.makeText(getApplicationContext(), "Error, Check City", Toast.LENGTH_SHORT).show();
-                loader.setVisibility(View.GONE);
+               // loader.setVisibility(View.GONE);
+                progressDialog.hide();
             }
 
 
@@ -331,7 +354,8 @@ public class MainActivity extends AppCompatActivity {
                     // functionality that depends on this permission.
 
                    // Toast.makeText(this, "You need to grant permission", Toast.LENGTH_SHORT).show();
-                    loader.setVisibility(View.GONE);
+                  //  loader.setVisibility(View.GONE);
+                    progressDialog.hide();
 
                     AlertDialog.Builder alertDialog = new AlertDialog.Builder(MainActivity.this);
                     alertDialog.setMessage("Do you want to quit?");
